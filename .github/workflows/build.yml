@@ -1,0 +1,20 @@
+name: Build
+on:
+  push:
+    branches:
+      - version1
+  pull_request:
+    types: [opened, synchronize, reopened]
+jobs:
+  sonarqube:
+    name: SonarQube
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v4
+        env:
+          GITHUB_TOKEN: "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"
+          SONAR_TOKEN: "1b07fa25cdeed0b10427dd1128be7e10e50806c7"
