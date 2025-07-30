@@ -3,7 +3,7 @@ pipeline {
  
   environment {
     APP = "hrms-frontend"
-    IMAGE = "cloudansh/hrms-frontend"
+    IMAGE = "kartik61/hrms-frontend"
   }
  
   stages {
@@ -15,7 +15,7 @@ pipeline {
  
     stage('Docker Build') {
       steps {
-        sh 'docker build -t cloudansh/hrms-frontend:latest .'
+        sh 'docker build -t kartik61/hrms-frontend:latest .'
         sh 'docker tag new:latest'
       }
     }
@@ -25,7 +25,7 @@ pipeline {
         withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
           sh '''
             echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-            docker push  cloudansh/hrms-frontend:latest
+            docker push  kartik61/hrms-frontend:latest
           '''
         }
       }
@@ -39,7 +39,7 @@ pipeline {
         ]) {
           sh """
             ssh -o StrictHostKeyChecking=no -i $KEY $SSH_USER@$REMOTE '
-              docker pull  cloudansh/hrms-frontend:latest
+              docker pull  kartik61/hrms-frontend:latest
               docker stop ${APP} || true
               docker rm ${APP} || true
               docker run -d  -p 80:80  cloudansh/hrms-frontend:latest
