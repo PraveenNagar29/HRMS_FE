@@ -1,55 +1,48 @@
 pipeline {
   agent any
-
+ 
   environment {
     APP = "hrms-frontend"
-    REMOTE = credentials('frontend-ec2-ip')
+    IMAGE = "cloudansh/hrms-frontend"
   }
-
+ 
   stages {
     stage('Checkout') {
-      steps { checkout scm }
-    }
-
-    stage('Build Docker Image') {
       steps {
-        sh 'docker build -t ${APP}:latest .'
+        checkout scm
       }
     }
-
-    stage('Trivy Scan') {
+ 
+    stage('Docker Build') {
       steps {
-        sh """
-          trivy image --severity LOW,MEDIUM,HIGH --exit-code 0 --format json \
-            -o trivy-${APP}.json ${APP}:latest
-          trivy image --severity CRITICAL --exit-code 1 --format json \
-            -o trivy-${APP}-crit.json ${APP}:latest
-          trivy convert --format template \
-            --template "@/usr/local/share/trivy/templates/html.tpl" \
-            --output trivy-${APP}.html trivy-${APP}.json
-        """
+        sh 'docker build -t cloudansh/hrms-frontend:latest .'
+        sh 'docker tag new:latest'
       }
-      post {
-        always {
-          publishHTML(target: [
-            allowMissing: true,
-            alwaysLinkToLastBuild: true,
-            reportDir: '.',
-            reportFiles: "trivy-${APP}.html",
-            reportName: "Trivy Report - ${APP}"
-          ])
+    }
+ 
+    stage('Push to Docker Hub') {
+      steps {
+        withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+          sh '''
+            echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+            docker push  cloudansh/hrms-frontend:latest
+          '''
         }
       }
     }
-
+ 
     stage('Deploy to EC2') {
       steps {
-        withCredentials([sshUserPrivateKey(credentialsId: 'frontend-ssh', keyFileVariable: 'KEY', usernameVariable: 'SSH_USER')]) {
+        withCredentials([
+          sshUserPrivateKey(credentialsId: 'frontend-ssh', keyFileVariable: 'KEY', usernameVariable: 'SSH_USER'),
+          string(credentialsId: 'frontend-ec2-ip', variable: 'REMOTE')
+        ]) {
           sh """
-            ssh -o StrictHostKeyChecking=no -i $KEY $SSH_USER@${REMOTE} '
+            ssh -o StrictHostKeyChecking=no -i $KEY $SSH_USER@$REMOTE '
+              docker pull  cloudansh/hrms-frontend:latest
               docker stop ${APP} || true
               docker rm ${APP} || true
-              docker run -d --name ${APP} -p 80:80 ${APP}:latest
+              docker run -d  -p 80:80  cloudansh/hrms-frontend:latest
             '
           """
         }
