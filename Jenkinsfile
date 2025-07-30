@@ -41,7 +41,7 @@ pipeline {
               docker pull  kartik61/hrms-frontend:latest
               docker stop ${APP} || true
               docker rm ${APP} || true
-              docker run -d  -p 80:80  cloudansh/hrms-frontend:latest
+              docker run -d  -p 80:80  kartik61/hrms-frontend:latest
             '
           """
         }
