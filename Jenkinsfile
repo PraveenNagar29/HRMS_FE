@@ -16,7 +16,6 @@ pipeline {
     stage('Docker Build') {
       steps {
         sh 'docker build -t kartik61/hrms-frontend:latest .'
-        sh 'docker tag new:latest'
       }
     }
  
