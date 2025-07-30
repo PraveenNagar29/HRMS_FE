@@ -1,51 +1,104 @@
 pipeline {
+
   agent any
  
   environment {
+
     APP = "hrms-frontend"
-    IMAGE = "kartik61/hrms-frontend"
+
+    IMAGE = "kartik61/hrms-frontend:latest"
+
   }
  
   stages {
-    stage('Checkout') {
+
+    stage('Checkout Code') {
+
       steps {
+
         checkout scm
+
       }
+
     }
  
     stage('Docker Build') {
+
       steps {
-        sh 'docker build -t kartik61/hrms-frontend:latest .'
+
+        sh 'docker build -t ${IMAGE} .'
+
       }
+
     }
  
-    stage('Push to Docker Hub') {
+    stage('Trivy Scan') {
+
       steps {
-        withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+
+        sh '''
+
+          if ! command -v trivy &> /dev/null; then
+
+            echo "Installing Trivy..."
+
+            curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+
+          fi
+
+          trivy image --severity HIGH,CRITICAL ${IMAGE} || true
+
+        '''
+
+      }
+
+    }
+ 
+    stage('Docker Login & Push') {
+
+      steps {
+
+        withCredentials([usernamePassword(
+
+          credentialsId: 'docker-hub-creds',
+
+          usernameVariable: 'DOCKER_USER',
+
+          passwordVariable: 'DOCKER_PASS'
+
+        )]) {
+
           sh '''
-            echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-            docker push  kartik61/hrms-frontend:latest
+
+            echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+
+            docker push ${IMAGE}
+
           '''
+
         }
+
       }
+
     }
- 
-    stage('Deploy to EC2') {
-      steps {
-        withCredentials([
-          sshUserPrivateKey(credentialsId: 'frontend-ssh', keyFileVariable: 'KEY', usernameVariable: 'SSH_USER'),
-          string(credentialsId: 'frontend-ec2-ip', variable: 'REMOTE')
-        ]) {
-          sh """
-            ssh -o StrictHostKeyChecking=no -i $KEY $SSH_USER@$REMOTE '
-              docker pull  kartik61/hrms-frontend:latest
-              docker stop ${APP} || true
-              docker rm ${APP} || true
-              docker run -d  -p 80:80  kartik61/hrms-frontend:latest
-            '
-          """
-        }
-      }
-    }
+
   }
+ 
+  post {
+
+    success {
+
+      echo "✅ Docker image pushed: ${IMAGE}"
+
+    }
+
+    failure {
+
+      echo "❌ Pipeline failed. Check console output."
+
+    }
+
+  }
+
 }
+ 
