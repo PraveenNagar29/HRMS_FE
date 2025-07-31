@@ -33,14 +33,32 @@ pipeline {
 
     }
  
-    stage('Trivy Scan') {
-
+    stage('Trivy Filesystem Scan') {
       steps {
-
-        sh "trivy image --severity CRITICAL,HIGH ${IMAGE} || true"
-
+        sh '''
+          echo "🔍 Running Trivy FS scan..."
+          mkdir -p trivy-fs-reports
+ 
+          # Optional: check Trivy version
+          docker run --rm aquasec/trivy --version
+ 
+          # Plain text report
+          docker run --rm -v $(pwd):/project aquasec/trivy fs \
+            --severity HIGH,CRITICAL \
+            --format table \
+            /project > trivy-fs-reports/trivy-fs-report.json || true
+ 
+          # Optional: HTML report using Trivy template
+          mkdir -p contrib
+          curl -sSL -o contrib/html.tpl https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/html.tpl
+ 
+          docker run --rm -v $(pwd):/project -v $(pwd)/contrib:/contrib aquasec/trivy fs \
+            --severity HIGH,CRITICAL \
+            --format template \
+            --template "@/contrib/html.tpl" \
+            /project > trivy-fs-reports/trivy-fs-report.html || true
+        '''
       }
-
     }
  
     stage('Docker Login & Push') {
