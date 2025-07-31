@@ -59,7 +59,13 @@ pipeline {
         '''
       }
     }
- 
+     stage('Sonar Qube Analysis') {
+       steps {
+         withSonarQubeEnv("Sonar"){
+             sh "$SONAR_HOME/bin/sonar-scanner -Dsonar.projectName=hrms -Dsonar.projectKey=hrms"
+         }
+       }
+    }
     stage('Docker Login & Push') {
 
       steps {
