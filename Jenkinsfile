@@ -21,27 +21,30 @@ pipeline {
       }
     }
 
-    stage('Trivy Scan') {
+   stage('Trivy Scan') {
   steps {
     sh '''
       mkdir -p trivy-bin
-      if ! ./trivy-bin/trivy &> /dev/null; then
-        echo "Installing Trivy..."
-        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b trivy-bin
-      fi
+      echo "[INFO] Installing Trivy..."
+      curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b trivy-bin
+
       export PATH=$PATH:$(pwd)/trivy-bin
-      ./trivy-bin/trivy --version
-      ./trivy-bin/trivy image --severity CRITICAL,HIGH ${IMAGE} --format html --output trivy-report.html || echo "Trivy scan failed"
+
+      echo "[INFO] Running Trivy..."
+      ./trivy-bin/trivy image ${IMAGE} --severity CRITICAL,HIGH --format html --output trivy-report.html
+
+      echo "[INFO] Listing files:"
       ls -la
     '''
     archiveArtifacts artifacts: 'trivy-report.html', onlyIfSuccessful: false
     publishHTML(target: [
       reportDir: '.',
       reportFiles: 'trivy-report.html',
-      reportName: 'Trivy Scan Report'
+      reportName: 'Trivy HTML Report'
     ])
   }
 }
+
 
 
     stage('Docker Login & Push') {
