@@ -21,19 +21,21 @@ pipeline {
       }
     }
 
-   stage('Trivy Scan') {
+  stage('Trivy Scan') {
   steps {
     sh '''
       mkdir -p trivy-bin
-      echo "[INFO] Installing Trivy..."
-      curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b trivy-bin
+      if ! ./trivy-bin/trivy &> /dev/null; then
+        echo "[INFO] Installing Trivy..."
+        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b trivy-bin
+      fi
 
       export PATH=$PATH:$(pwd)/trivy-bin
+      echo "[INFO] Running Trivy JSON scan..."
+      ./trivy-bin/trivy image ${IMAGE} --severity CRITICAL,HIGH --format json --output trivy-report.json
 
-      echo "[INFO] Running Trivy..."
-      ./trivy-bin/trivy image ${IMAGE} --severity CRITICAL,HIGH --format html --output trivy-report.html
-
-      echo "[INFO] Listing files:"
+      echo "[INFO] Converting JSON to HTML..."
+      ./trivy-bin/trivy convert --format template --template "@contrib/html.tpl" trivy-report.json > trivy-report.html
       ls -la
     '''
     archiveArtifacts artifacts: 'trivy-report.html', onlyIfSuccessful: false
