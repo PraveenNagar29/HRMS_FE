@@ -30,9 +30,14 @@ pipeline {
             curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b trivy-bin
           fi
           export PATH=$PATH:$(pwd)/trivy-bin
-          ./trivy-bin/trivy image --severity CRITICAL,HIGH ${IMAGE} --format table --output trivy-report.txt || true
+          ./trivy-bin/trivy image --severity CRITICAL,HIGH ${IMAGE} --format html --output trivy-report.html || true
         '''
-        archiveArtifacts artifacts: 'trivy-report.txt', onlyIfSuccessful: false
+        archiveArtifacts artifacts: 'trivy-report.html', onlyIfSuccessful: false
+        publishHTML(target: [
+          reportDir: '.',
+          reportFiles: 'trivy-report.html',
+          reportName: 'Trivy Scan Report'
+        ])
       }
     }
 
