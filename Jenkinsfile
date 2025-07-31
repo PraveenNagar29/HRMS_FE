@@ -1,80 +1,98 @@
+Jenkins file :
 pipeline {
 
   agent any
-
+ 
   environment {
-    APP = "hrms-frontend"
-    IMAGE = "kartik61/hrms-frontend:latest"
-  }
 
+    APP = "hrms-frontend"
+
+    IMAGE = "kartik61/hrms-frontend:latest"
+
+  }
+ 
   stages {
 
     stage('Checkout Code') {
+
       steps {
+
         checkout scm
-      }
-    }
 
+      }
+
+    }
+ 
     stage('Docker Build') {
+
       steps {
+
         sh 'docker build -t ${IMAGE} .'
+
       }
+
     }
+ 
+    stage('Trivy Scan') {
 
-  stage('Trivy Scan') {
-  steps {
-    sh '''
-      mkdir -p trivy-bin
-      if ! ./trivy-bin/trivy &> /dev/null; then
-        echo "[INFO] Installing Trivy..."
-        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b trivy-bin
-      fi
+      steps {
 
-      export PATH=$PATH:$(pwd)/trivy-bin
-      echo "[INFO] Running Trivy JSON scan..."
-      ./trivy-bin/trivy image ${IMAGE} --severity CRITICAL,HIGH --format json --output trivy-report.json
+        sh "trivy image --severity CRITICAL,HIGH ${IMAGE} || true"
 
-      echo "[INFO] Converting JSON to HTML..."
-      ./trivy-bin/trivy convert --format template --template "@contrib/html.tpl" trivy-report.json > trivy-report.html
-      ls -la
-    '''
-    archiveArtifacts artifacts: 'trivy-report.html', onlyIfSuccessful: false
-    publishHTML(target: [
-      reportDir: '.',
-      reportFiles: 'trivy-report.html',
-      reportName: 'Trivy HTML Report'
-    ])
-  }
-}
+      }
 
-
-
+    }
+ 
     stage('Docker Login & Push') {
+
       steps {
+
         withCredentials([usernamePassword(
+
           credentialsId: 'docker-hub-creds',
+
           usernameVariable: 'DOCKER_USERNAME',
+
           passwordVariable: 'DOCKER_PASSWORD'
+
         )]) {
+
           sh '''
+
             echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+
             docker push ${IMAGE}
+
           '''
+
         }
-      }
-    }
 
+      }
+
+    }
+ 
     stage('Docker Run') {
+
       steps {
+
         sh 'docker stop ${APP} || true && docker rm ${APP} || true'
+
         sh 'docker run -d --name ${APP} -p 3000:80 ${IMAGE}'
+
       }
+
     }
+
+  }
+ 
+  post {
+
+    failure {
+
+      echo "❌ Pipeline failed. Check console output."
+
+    }
+
   }
 
-  post {
-    failure {
-      echo "❌ Pipeline failed. Check console output."
-    }
-  }
 }
