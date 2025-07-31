@@ -8,6 +8,10 @@ pipeline {
 
     IMAGE = "kartik61/hrms-frontend:latest"
 
+    SONAR_HOME = tool "sonar" 
+
+    
+
   }
  
   stages {
