@@ -36,19 +36,7 @@ pipeline {
 
       steps {
 
-        sh '''
-
-          if ! command -v trivy &> /dev/null; then
-
-            echo "Installing Trivy..."
-
-            curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
-
-          fi
-
-          trivy image --severity HIGH,CRITICAL ${IMAGE} || true
-
-        '''
+        sh "trivy image --severity CRITICAL,HIGH ${IMAGE} || true"
 
       }
 
@@ -62,15 +50,15 @@ pipeline {
 
           credentialsId: 'docker-hub-creds',
 
-          usernameVariable: 'DOCKER_USER',
+          usernameVariable: 'DOCKER_USERNAME',
 
-          passwordVariable: 'DOCKER_PASS'
+          passwordVariable: 'DOCKER_PASSWORD'
 
         )]) {
 
           sh '''
 
-            echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+            echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
 
             docker push ${IMAGE}
 
@@ -81,16 +69,22 @@ pipeline {
       }
 
     }
+ 
+    stage('Docker Run') {
+
+      steps {
+
+        sh 'docker stop ${APP} || true && docker rm ${APP} || true'
+
+        sh 'docker run -d --name ${APP} -p 3000:80 ${IMAGE}'
+
+      }
+
+    }
 
   }
  
   post {
-
-    success {
-
-      echo "✅ Docker image pushed: ${IMAGE}"
-
-    }
 
     failure {
 
@@ -101,4 +95,3 @@ pipeline {
   }
 
 }
- 
