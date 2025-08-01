@@ -48,16 +48,17 @@ pipeline {
       }
     }
 
-    stage('SonarQube Analysis') {
+     stage('SonarQube Analysis') {
       steps {
-        withSonarQubeEnv('Sonar') {
+        withSonarQubeEnv("Sonar") {
           sh '''
-            sonar-scanner \
-              -Dsonar.projectKey=hrms-frontend \
-              -Dsonar.projectName=hrms-frontend \
+            echo "🔎 Starting SonarQube analysis..."
+            $SONAR_HOME/bin/sonar-scanner \
+              -Dsonar.projectName=hrms \
+              -Dsonar.projectKey=hrms \
               -Dsonar.sources=. \
-              -Dsonar.exclusions=node_modules/**,build/**,dist/** \
-              -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info || true
+              -Dsonar.language=js \
+              -Dsonar.sourceEncoding=UTF-8
           '''
         }
       }
