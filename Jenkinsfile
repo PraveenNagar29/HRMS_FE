@@ -4,12 +4,10 @@ pipeline {
   environment {
     APP = "hrms-frontend"
     IMAGE = "kartik61/hrms-frontend:latest"
+    SONAR_HOME = tool "Sonar"
   }
 
-  tools {
-    sonarQube 'sonar' // 'sonar' is the name of the SonarQube tool in Jenkins global config
-  }
-
+ 
   stages {
     stage('Checkout Code') {
       steps {
