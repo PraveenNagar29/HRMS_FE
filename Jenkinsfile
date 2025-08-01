@@ -4,7 +4,7 @@ pipeline {
   environment {
     APP = "hrms-frontend"
     IMAGE = "kartik61/hrms-frontend:latest"
-    SONAR_HOME = tool "Sonar"
+    SONAR_HOME = tool "sonar"
   }
 
  
