@@ -1,0 +1,58 @@
+
+
+on:
+  push:
+    branches: [ main ]   # change branch if you want
+
+env:
+  APP_NAME: my-node-app          # change to your app name
+  CONTAINER_PORT: 3000           # port your Node app listens to inside container
+  HOST_PORT: 80                  # host port on EC2 you want exposed
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: |
+          docker build -t ${{ env.APP_NAME }}:${{ github.sha }} .
+
+      - name: Save image to tar
+        run: |
+          docker save -o ${APP_NAME}.tar ${{ env.APP_NAME }}:${{ github.sha }}
+
+      - name: Prepare SSH key (for scp/ssh)
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          SSH_PORT=${{ secrets.EC2_SSH_PORT || '22' }}
+          ssh-keyscan -p $SSH_PORT ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+        shell: bash
+
+      - name: Create remote deploy dir
+        run: |
+          SSH_PORT=${{ secrets.EC2_SSH_PORT || '22' }}
+          ssh -p $SSH_PORT ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "mkdir -p /home/${{ secrets.EC2_USER }}/deploy"
+        shell: bash
+
+      - name: Copy image tar to EC2
+        run: |
+          SSH_PORT=${{ secrets.EC2_SSH_PORT || '22' }}
+          scp -P $SSH_PORT ${APP_NAME}.tar ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/${{ secrets.EC2_USER }}/deploy/
+        shell: bash
+
+      - name: Load image and run container on EC2
+        run: |
+          SSH_PORT=${{ secrets.EC2_SSH_PORT || '22' }}
+          # load, remove old container (if any) and start new one
+          ssh -p $SSH_PORT ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} \
+            "sudo docker load -i /home/${{ secrets.EC2_USER }}/deploy/${APP_NAME}.tar && \
+             sudo docker rm -f ${{ env.APP_NAME }} || true && \
+             sudo docker run -d --name ${{ env.APP_NAME }} --restart unless-stopped -p ${{ env.HOST_PORT }}:${{ env.CONTAINER_PORT }} ${{ env.APP_NAME }}:${{ github.sha }}"
+        shell: bash
+
