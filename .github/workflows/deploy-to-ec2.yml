@@ -1,5 +1,5 @@
 
-name: Deploy React Application
+name: CiCD
 
 on:
   push:
@@ -8,36 +8,31 @@ on:
 
 jobs:
   build:
-    runs-on: self-hosted
-
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout Source
         uses: actions/checkout@v4
 
       - name: Login to Docker Hub
-        uses: docker/login-action@1
-        with:
-          username: ${{ secrets.Dco_user }}
-          password: ${{ secrets.  passsPAS }}
+        run: docker login -u ${{ secrets.DOCKER_USER }} -p ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and Push Docker Image
-        run: 
       - name: Build Docker image
-        run: docker build -t praveen2906/myapp:latest .
+        run: docker build -t praveen2906/HRMS .
 
       - name: Push Docker image
-        run: docker push praveen2906/myapp:latest
+        run: docker push praveen2906/HRMS:latest
+
   deploy:
     needs: build
     runs-on: self-hosted  # Your EC2 runner
 
     steps:
       - name: Pull image from Docker Hub
-        run: docker pull akashmalviya203/hrms-app:latest
+        run: docker pull praveen2906/HRMS:latest
 
       - name: Delete old container
-        run: docker rm -f hrms-app-container || true
+        run: docker rm -f HRMS-container || true
 
       - name: Run Docker Container
-        run: docker run -d -p 3000:80 --name hrms-app-container akashmalviya203/hrms-app:latest
+        run: docker run -d -p 3000:80 --name HRMS-container praveen2906/HRMS:latest
 
