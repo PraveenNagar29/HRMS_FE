@@ -24,7 +24,7 @@ jobs:
 
   deploy:
     needs: build
-    runs-on: self-hosted  # Your EC2 runner
+    runs-on: ubuntu-latest # local
 
     steps:
       - name: Pull image from Docker Hub
