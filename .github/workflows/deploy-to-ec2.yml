@@ -17,7 +17,7 @@ jobs:
         run: docker login -u ${{ secrets.DOCKER_USER }} -p ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build Docker image
-        run: docker build -t praveen2906/hrms-app .
+        run: sudo docker build -t praveen2906/hrms-app:latest .
 
       - name: Push Docker image
         run: docker push praveen2906/hrms-app:latest
