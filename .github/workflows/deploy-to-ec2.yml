@@ -20,7 +20,7 @@ jobs:
         run: sudo docker build -t praveen2906/hrms-app:latest .
 
       - name: Push Docker image
-        run: sudo docker push praveen2906/hrms-app:latest
+        run: docker push praveen2906/hrms-app:latest
 
       - name: Pull image from Docker Hub
         run: sudo docker pull praveen2906/hrms-app:latest
