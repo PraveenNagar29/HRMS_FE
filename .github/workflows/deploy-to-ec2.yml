@@ -20,13 +20,13 @@ jobs:
         run: sudo docker build -t praveen2906/hrms-app:latest .
 
       - name: Push Docker image
-        run: docker push praveen2906/hrms-app:latest
+        run: sudo docker push praveen2906/hrms-app:latest
 
       - name: Pull image from Docker Hub
-        run: docker pull praveen2906/hrms-app:latest
+        run: sudo docker pull praveen2906/hrms-app:latest
 
       - name: Delete old container
-        run: docker rm -f hrms-app-container || true
+        run: sudo docker rm -f hrms-app-container || true
 
       - name: Run Docker Container
         run: docker run -d -p 3000:80 --name hrms-app-container praveen2906/hrms-app:latest
